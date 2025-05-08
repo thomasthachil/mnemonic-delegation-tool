@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, type FieldValues } from "react-hook-form"
 import { z } from "zod"
@@ -16,7 +16,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { recoverAuthorizationAddress, verifyAuthorization } from "viem/utils"
 
 const formSchema = z.object({
   mnemonic: z.string().min(12, {
@@ -31,10 +30,19 @@ const formSchema = z.object({
 
 const chains = {
   mainnet: mainnet,
+  unichain: unichain,
   sepolia: sepolia,
   optimism: optimism,
   base: base,
-  unichain: unichain,
+}
+
+// Chain styling
+const chainStyles = {
+  mainnet: { color: "#29B6AF", icon: "⟠", label: "Mainnet" },
+  unichain: { color: "#FF007A", icon: "🦄", label: "Unichain" },
+  sepolia: { color: "#9064FF", icon: "🧪", label: "Sepolia" },
+  optimism: { color: "#FF0420", icon: "⊙", label: "Optimism" },
+  base: { color: "#0052FF", icon: "ß", label: "Base" },
 }
 
 // Contract addresses by chain
@@ -50,6 +58,12 @@ const contractAddresses = {
   }
 }
 
+// Contract provider styling
+const contractProviderStyles = {
+  metamask: { color: "#F6851B", icon: "🦊", label: "MetaMask" },
+  uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap" }
+}
+
 type ChainKey = keyof typeof chains
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,6 +74,12 @@ export default function DelegationForm() {
     message: string
   }>({ type: null, message: "" })
   const [account, setAccount] = useState<HDAccount | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // After mounting, we can safely show the UI
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -136,6 +156,9 @@ export default function DelegationForm() {
     }
   };
 
+  // Don't render UI until mounted to prevent hydration mismatch
+  if (!mounted) return null;
+
   return (
     <div className="space-y-6">
       <Form {...form}>
@@ -175,29 +198,45 @@ export default function DelegationForm() {
           <FormField
             control={form.control}
             name="chain"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Blockchain Network</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select chain" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="mainnet">Mainnet</SelectItem>
-                    <SelectItem value="unichain">Unichain</SelectItem>
-                    <SelectItem value="sepolia">Sepolia</SelectItem>
-                    <SelectItem value="optimism">Optimism</SelectItem>
-                    <SelectItem value="base">Base</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  The blockchain network where the delegation contract is deployed and transaction will be sent
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              const selectedChain = field.value as keyof typeof chainStyles;
+              
+              return (
+                <FormItem>
+                  <FormLabel>Blockchain Network</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select chain">
+                          {field.value && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg" style={{ color: chainStyles[selectedChain].color }}>
+                                {chainStyles[selectedChain].icon}
+                              </span>
+                              {chainStyles[selectedChain].label}
+                            </div>
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(chainStyles).map(([key, { color, icon, label }]) => (
+                        <SelectItem key={key} value={key} className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg" style={{ color: color }}>{icon}</span>
+                            <span>{label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    The blockchain network where the delegation contract is deployed and transaction will be sent
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField
@@ -209,27 +248,25 @@ export default function DelegationForm() {
                 <FormControl>
                   <Input placeholder="0x..." className="font-mono" {...field} />
                 </FormControl>
-                <FormDescription>
+                <FormDescription className="mb-0">
                   The address of the delegation contract on the source chain
-                  <div className="flex gap-2 mt-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handlePresetContract('metamask')}
-                    >
-                      Use MetaMask Contract
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handlePresetContract('uniswap')}
-                    >
-                      Use Uniswap Contract
-                    </Button>
-                  </div>
                 </FormDescription>
+                <div className="flex gap-2 mt-2">
+                  {Object.entries(contractProviderStyles).map(([key, { color, icon, label }]) => (
+                    <Button 
+                      key={key}
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handlePresetContract(key as 'metamask' | 'uniswap')}
+                      className="flex items-center gap-1"
+                      style={{ borderColor: color }}
+                    >
+                      <span className="text-base" style={{ color }}>{icon}</span>
+                      <span>Use {label} Contract</span>
+                    </Button>
+                  ))}
+                </div>
                 <FormMessage />
               </FormItem>
             )}
