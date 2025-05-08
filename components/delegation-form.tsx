@@ -61,7 +61,8 @@ const contractAddresses = {
 // Contract provider styling
 const contractProviderStyles = {
   metamask: { color: "#F6851B", icon: "🦊", label: "MetaMask" },
-  uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap" }
+  uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap" },
+  undelegate: { color: "#FF3B30", icon: "❌", label: "Undelegate" }
 }
 
 type ChainKey = keyof typeof chains
@@ -155,13 +156,15 @@ export default function DelegationForm() {
     }
   }
 
-  const handlePresetContract = (type: 'metamask' | 'uniswap') => {
+  const handlePresetContract = (type: 'metamask' | 'uniswap' | 'undelegate') => {
     const chainValue = form.getValues('chain');
     
     if (type === 'metamask' && chainValue in contractAddresses.metamask) {
       setContractAddress(contractAddresses.metamask[chainValue as keyof typeof contractAddresses.metamask]);
     } else if (type === 'uniswap' && chainValue in contractAddresses.uniswap) {
       setContractAddress(contractAddresses.uniswap[chainValue as keyof typeof contractAddresses.uniswap]);
+    } else if (type === 'undelegate') {
+      setContractAddress("0x0000000000000000000000000000000000000000");
     }
   };
 
@@ -267,12 +270,12 @@ export default function DelegationForm() {
                       type="button" 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handlePresetContract(key as 'metamask' | 'uniswap')}
+                      onClick={() => handlePresetContract(key as 'metamask' | 'uniswap' | 'undelegate')}
                       className="flex items-center gap-1"
                       style={{ borderColor: color }}
                     >
                       <span className="text-base" style={{ color }}>{icon}</span>
-                      <span>Use {label} Contract</span>
+                      <span>{key === 'undelegate' ? 'Undelegate' : `Use ${label} Contract`}</span>
                     </Button>
                   ))}
                 </div>
