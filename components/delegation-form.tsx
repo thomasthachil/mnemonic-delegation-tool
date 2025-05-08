@@ -122,7 +122,15 @@ export default function DelegationForm() {
         executor: 'self'
       })
 
-      const encodedDataHex = "0xblank" as `0x${string}`
+      const encodedDataHex = "0x" as `0x${string}`
+
+      // estimate gas without authorization because it fails for some reason
+      const gas = await walletClient.estimateGas({
+        // authorizationList: [authorization],
+        data: encodedDataHex,
+        value: BigInt(0),
+        to: account.address,
+      })
 
       // Send transaction on the same chain
       const hash = await walletClient.sendTransaction({
@@ -131,6 +139,7 @@ export default function DelegationForm() {
         value: BigInt(0),
         to: account.address,
         chainId: chainConfig.id,
+        gas: gas + BigInt(210000), // offset with authorization gas cost
       })
 
       setStatus({
