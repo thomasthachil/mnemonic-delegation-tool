@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 const formSchema = z.object({
@@ -69,10 +69,16 @@ type ChainKey = keyof typeof chains
 
 type FormValues = z.infer<typeof formSchema>;
 
+// EIP-3074 AUTH opcode prefixed bytecode signature
+const EIP_7702_BYTECODE_PREFIX = "0xef0100"
+
 export default function DelegationForm() {
   const [status, setStatus] = useState<{
     type: "success" | "error" | "loading" | null
     message: string
+    txHash?: `0x${string}`
+    isConfirmed?: boolean
+    delegationVerified?: boolean
   }>({ type: null, message: "" })
   const [account, setAccount] = useState<HDAccount | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -143,10 +149,58 @@ export default function DelegationForm() {
         gas: gas + BigInt(210000), // offset with authorization gas cost
       })
 
+      // Update status with transaction hash
       setStatus({
         type: "success",
-        message: `Delegation successful! Transaction hash: ${hash}`,
+        message: "Transaction submitted successfully!",
+        txHash: hash,
+        isConfirmed: false
       })
+
+      // Wait for transaction confirmation
+      try {
+        const receipt = await walletClient.waitForTransactionReceipt({ hash })
+        setStatus(prev => ({ 
+          ...prev, 
+          message: "Transaction confirmed! Verifying delegation...",
+          isConfirmed: true 
+        }))
+        
+        // Verify delegation by checking if the expected contract address is set
+        try {
+          // Get the target contract address
+          const targetContractAddress = values.contractAddress as `0x${string}`
+          
+          // Check the delegation status through the code at the address
+          // or by making a specific call to a method that checks delegation
+          const code = await walletClient.getCode({
+            address: account.address
+          })
+          
+          const isDelegated = code?.startsWith(EIP_7702_BYTECODE_PREFIX) ? '0x' + code.slice(EIP_7702_BYTECODE_PREFIX.length).toLowerCase() === targetContractAddress.toLowerCase()  : false
+
+          setStatus(prev => ({
+            ...prev,
+            message: isDelegated 
+              ? "Delegation verified successfully!" 
+              : "Transaction confirmed but delegation verification failed.",
+            delegationVerified: isDelegated
+          }))
+        } catch (error) {
+          console.error("Error verifying delegation:", error)
+          setStatus(prev => ({
+            ...prev,
+            message: "Transaction confirmed but could not verify delegation status.",
+            delegationVerified: false
+          }))
+        }
+      } catch (error) {
+        console.error("Error waiting for transaction confirmation:", error)
+        setStatus(prev => ({ 
+          ...prev, 
+          message: prev.message + " Error confirming transaction." 
+        }))
+      }
     } catch (error) {
       console.error(error)
       setStatus({
@@ -303,9 +357,58 @@ export default function DelegationForm() {
 
       {status.type && (
         <Alert variant={status.type === "error" ? "destructive" : "default"}>
-          {status.type === "error" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-          <AlertTitle>{status.type === "error" ? "Error" : "Success"}</AlertTitle>
-          <AlertDescription className="font-mono text-sm break-all">{status.message}</AlertDescription>
+          {status.type === "error" ? 
+            <AlertCircle className="h-4 w-4" /> : 
+            status.type === "loading" ? 
+              <Loader2 className="h-4 w-4 animate-spin" /> : 
+              <CheckCircle2 className="h-4 w-4" />
+          }
+          <AlertTitle>{status.type === "error" ? "Error" : status.type === "loading" ? "Processing" : "Success"}</AlertTitle>
+          <AlertDescription>
+            <div className="space-y-2">
+              <p>{status.message}</p>
+              
+              {status.txHash && (
+                <div className="mt-2">
+                  <p className="font-semibold text-sm">Transaction Hash:</p>
+                  <p className="font-mono text-xs break-all">{status.txHash}</p>
+                </div>
+              )}
+              
+              {status.txHash && (
+                <div className="mt-1">
+                  <p className="font-semibold text-sm">Status:</p>
+                  <div className="flex items-center">
+                    {status.isConfirmed ? (
+                      <span className="inline-block w-2 h-2 rounded-full mr-2 bg-green-500"></span>
+                    ) : (
+                      <Loader2 className="h-3 w-3 mr-2 text-yellow-500 animate-spin" />
+                    )}
+                    <p className="text-sm">{status.isConfirmed ? 'Confirmed' : 'Pending'}</p>
+                  </div>
+                </div>
+              )}
+
+              {status.isConfirmed && (
+                <div className="mt-1">
+                  <p className="font-semibold text-sm">Delegation Verification:</p>
+                  <div className="flex items-center">
+                    {status.delegationVerified === undefined ? (
+                      <Loader2 className="h-3 w-3 mr-2 text-yellow-500 animate-spin" />
+                    ) : (
+                      <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                        status.delegationVerified ? 'bg-green-500' : 'bg-red-500'
+                      }`}></span>
+                    )}
+                    <p className="text-sm">{
+                      status.delegationVerified === true ? 'Verified' : 
+                      status.delegationVerified === false ? 'Failed' : 'Verifying...'
+                    }</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </AlertDescription>
         </Alert>
       )}
     </div>
