@@ -6,7 +6,7 @@ import { useForm, type FieldValues } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
 import { createWalletClient, http, publicActions } from "viem"
-import { mainnet, sepolia, optimism, base, unichain } from "viem/chains"
+import { mainnet, sepolia, optimism, base, unichain, unichainSepolia, arbitrum, opBNB, polygon, blast, worldchain, avalanche, zora, soneium } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -34,6 +34,15 @@ const chains = {
   sepolia: sepolia,
   optimism: optimism,
   base: base,
+  unichainSepolia: unichainSepolia,
+  arbitrum: arbitrum,
+  polygon: polygon,
+  opBNB: opBNB,
+  blast: blast,
+  worldchain: worldchain,
+  avalanche: avalanche,
+  zora: zora,
+  soneium: soneium,
 }
 
 // Chain styling
@@ -41,8 +50,15 @@ const chainStyles = {
   mainnet: { color: "#29B6AF", icon: "⟠", label: "Mainnet" },
   unichain: { color: "#FF007A", icon: "🦄", label: "Unichain" },
   sepolia: { color: "#9064FF", icon: "🧪", label: "Sepolia" },
-  optimism: { color: "#FF0420", icon: "⊙", label: "Optimism" },
-  base: { color: "#0052FF", icon: "ß", label: "Base" },
+  optimism: { color: "#FF0420", icon: "🔴", label: "Optimism" },
+  base: { color: "#0052FF", icon: "🔵", label: "Base" },
+  unichainSepolia: { color: "#FF007A", icon: "🦄", label: "Unichain Sepolia" },
+  arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
+  polygon: { color: "#FF007A", icon: "🔗", label: "Polygon" },
+  opBNB: { color: "#FF007A", icon: "🔗", label: "OpBNB" },
+  blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
+  worldchain: { color: "#FF007A", icon: "🔗", label: "Worldchain" },
+  avalanche: { color: "#FF007A", icon: "🔗", label: "Avalanche" },
 }
 
 // Contract addresses by chain
@@ -53,15 +69,38 @@ const contractAddresses = {
   },
   uniswap: {
     mainnet: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    sepolia: "0x964914430aAe3e6805675EcF648cEfaED9e546a7",
+    sepolia: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
     unichain: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-  }
+    optimism: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    base: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    unichainSepolia: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    arbitrum: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    polygon: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    opBNB: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    blast: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    worldchain: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+  },
+  uniswapNew: {
+    mainnet: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    sepolia: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    unichain: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    optimism: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    base: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    unichainSepolia: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    arbitrum: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    polygon: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    opBNB: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    blast: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    worldchain: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+  },
+
 }
 
 // Contract provider styling
 const contractProviderStyles = {
   metamask: { color: "#F6851B", icon: "🦊", label: "MetaMask" },
   uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap" },
+  uniswapNew: { color: "#FF007A", icon: "🦄", label: "New Uniswap" },
   undelegate: { color: "#FF3B30", icon: "❌", label: "Undelegate" }
 }
 
@@ -210,13 +249,15 @@ export default function DelegationForm() {
     }
   }
 
-  const handlePresetContract = (type: 'metamask' | 'uniswap' | 'undelegate') => {
+  const handlePresetContract = (type: 'metamask' | 'uniswap' | 'undelegate' | 'uniswapNew') => {
     const chainValue = form.getValues('chain');
     
     if (type === 'metamask' && chainValue in contractAddresses.metamask) {
       setContractAddress(contractAddresses.metamask[chainValue as keyof typeof contractAddresses.metamask]);
     } else if (type === 'uniswap' && chainValue in contractAddresses.uniswap) {
       setContractAddress(contractAddresses.uniswap[chainValue as keyof typeof contractAddresses.uniswap]);
+    } else if (type === 'uniswapNew' && chainValue in contractAddresses.uniswapNew) {
+      setContractAddress(contractAddresses.uniswapNew[chainValue as keyof typeof contractAddresses.uniswapNew]);
     } else if (type === 'undelegate') {
       setContractAddress("0x0000000000000000000000000000000000000000");
     }
@@ -324,7 +365,7 @@ export default function DelegationForm() {
                       type="button" 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handlePresetContract(key as 'metamask' | 'uniswap' | 'undelegate')}
+                      onClick={() => handlePresetContract(key as 'metamask' | 'uniswap' | 'undelegate' | 'uniswapNew')}
                       className="flex items-center gap-1"
                       style={{ borderColor: color }}
                     >
