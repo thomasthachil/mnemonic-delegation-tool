@@ -31,34 +31,25 @@ const formSchema = z.object({
 const chains = {
   mainnet: mainnet,
   unichain: unichain,
-  sepolia: sepolia,
   optimism: optimism,
   base: base,
-  unichainSepolia: unichainSepolia,
-  arbitrum: arbitrum,
-  polygon: polygon,
   opBNB: opBNB,
-  blast: blast,
-  worldchain: worldchain,
-  avalanche: avalanche,
-  zora: zora,
-  soneium: soneium,
 }
 
 // Chain styling
 const chainStyles = {
   mainnet: { color: "#29B6AF", icon: "⟠", label: "Mainnet" },
   unichain: { color: "#FF007A", icon: "🦄", label: "Unichain" },
-  sepolia: { color: "#9064FF", icon: "🧪", label: "Sepolia" },
+  // sepolia: { color: "#9064FF", icon: "🧪", label: "Sepolia" },
   optimism: { color: "#FF0420", icon: "🔴", label: "Optimism" },
   base: { color: "#0052FF", icon: "🔵", label: "Base" },
-  unichainSepolia: { color: "#FF007A", icon: "🦄", label: "Unichain Sepolia" },
-  arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
-  polygon: { color: "#FF007A", icon: "🔗", label: "Polygon" },
+  // unichainSepolia: { color: "#FF007A", icon: "🦄", label: "Unichain Sepolia" },
+  // arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
+  // polygon: { color: "#FF007A", icon: "🔗", label: "Polygon" },
   opBNB: { color: "#FF007A", icon: "🔗", label: "OpBNB" },
-  blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
-  worldchain: { color: "#FF007A", icon: "🔗", label: "Worldchain" },
-  avalanche: { color: "#FF007A", icon: "🔗", label: "Avalanche" },
+  // blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
+  // worldchain: { color: "#FF007A", icon: "🔗", label: "Worldchain" },
+  // avalanche: { color: "#FF007A", icon: "🔗", label: "Avalanche" },
 }
 
 // Contract addresses by chain
@@ -66,41 +57,30 @@ const contractAddresses = {
   metamask: {
     mainnet: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     sepolia: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    base: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
   },
   uniswap: {
-    mainnet: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    sepolia: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    unichain: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    optimism: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    base: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    unichainSepolia: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    arbitrum: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    polygon: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    opBNB: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    blast: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
-    worldchain: "0x0c338ca25585035142A9a0a1EEebA267256f281f",
+    mainnet: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
+    unichain: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
+    optimism: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
+    base: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
+    opBNB: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
   },
   uniswapNew: {
-    mainnet: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    sepolia: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    unichain: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    optimism: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    base: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    unichainSepolia: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    arbitrum: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    polygon: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    opBNB: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    blast: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
-    worldchain: "0x458f5a9f47A01beA5d7A32662660559D9eD3312c",
+    mainnet: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    unichain: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    optimism: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    base: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    opBNB: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
   },
 
 }
 
 // Contract provider styling
 const contractProviderStyles = {
+  uniswapNew: { color: "#FF007A", icon: "🦄", label: "Uniswap (latest)" },
   metamask: { color: "#F6851B", icon: "🦊", label: "MetaMask" },
-  uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap" },
-  uniswapNew: { color: "#FF007A", icon: "🦄", label: "New Uniswap" },
+  uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap (old)" },
   undelegate: { color: "#FF3B30", icon: "❌", label: "Undelegate" }
 }
 
@@ -370,7 +350,7 @@ export default function DelegationForm() {
                       style={{ borderColor: color }}
                     >
                       <span className="text-base" style={{ color }}>{icon}</span>
-                      <span>{key === 'undelegate' ? 'Undelegate' : `Use ${label} Contract`}</span>
+                      <span>{key === 'undelegate' ? 'Undelegate' : `${label}`}</span>
                     </Button>
                   ))}
                 </div>
