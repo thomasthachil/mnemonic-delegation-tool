@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm, type FieldValues } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
 import { createWalletClient, http, publicActions } from "viem"
-import { mainnet, sepolia, optimism, base, unichain, unichainSepolia, arbitrum, opBNB, polygon, blast, worldchain, avalanche, zora, soneium } from "viem/chains"
+import { mainnet, optimism, base, unichain, bsc } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -33,7 +33,7 @@ const chains = {
   unichain: unichain,
   optimism: optimism,
   base: base,
-  opBNB: opBNB,
+  bsc: bsc,
 }
 
 // Chain styling
@@ -46,7 +46,7 @@ const chainStyles = {
   // unichainSepolia: { color: "#FF007A", icon: "🦄", label: "Unichain Sepolia" },
   // arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
   // polygon: { color: "#FF007A", icon: "🔗", label: "Polygon" },
-  opBNB: { color: "#FF007A", icon: "🔗", label: "OpBNB" },
+  bsc: { color: "#FF007A", icon: "🔗", label: "BSC" },
   // blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
   // worldchain: { color: "#FF007A", icon: "🔗", label: "Worldchain" },
   // avalanche: { color: "#FF007A", icon: "🔗", label: "Avalanche" },
@@ -64,14 +64,14 @@ const contractAddresses = {
     unichain: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
     optimism: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
     base: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
-    opBNB: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
+    bsc: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
   },
   uniswapNew: {
     mainnet: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     unichain: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     optimism: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     base: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
-    opBNB: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    bsc: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
   },
 
 }
