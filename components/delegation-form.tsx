@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
 import { createWalletClient, http, publicActions } from "viem"
-import { mainnet, optimism, base, unichain, bsc } from "viem/chains"
+import { mainnet, optimism, base, unichain, bsc, arbitrum } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -34,6 +34,7 @@ const chains = {
   optimism: optimism,
   base: base,
   bsc: bsc,
+  arbitrum: arbitrum,
 }
 
 // Chain styling
@@ -44,7 +45,7 @@ const chainStyles = {
   optimism: { color: "#FF0420", icon: "🔴", label: "Optimism" },
   base: { color: "#0052FF", icon: "🔵", label: "Base" },
   // unichainSepolia: { color: "#FF007A", icon: "🦄", label: "Unichain Sepolia" },
-  // arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
+  arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
   // polygon: { color: "#FF007A", icon: "🔗", label: "Polygon" },
   bsc: { color: "#FF007A", icon: "🔗", label: "BSC" },
   // blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
@@ -58,6 +59,7 @@ const contractAddresses = {
     mainnet: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     sepolia: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     base: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    arbitrum: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
   },
   uniswap: {
     mainnet: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
@@ -72,6 +74,7 @@ const contractAddresses = {
     optimism: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     base: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     bsc: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    arbitrum: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
   },
 
 }
