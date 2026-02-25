@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -103,12 +103,7 @@ export default function DelegationForm() {
     delegationVerified?: boolean
   }>({ type: null, message: "" })
   const [account, setAccount] = useState<HDAccount | null>(null)
-  const [mounted, setMounted] = useState(false)
-
-  // After mounting, we can safely show the UI
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
