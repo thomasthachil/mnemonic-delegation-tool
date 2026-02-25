@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useSyncExternalStore } from "react"
+import React, { useState, useSyncExternalStore } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import confetti from "canvas-confetti"
 import {
@@ -15,6 +15,14 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  EthereumIcon,
+  UnichainIcon,
+  OptimismIcon,
+  BaseIcon,
+  BscIcon,
+  ArbitrumIcon,
+} from "@/components/chain-icons"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
 import { createWalletClient, http, publicActions } from "viem"
 import { mainnet, optimism, base, unichain, bsc, arbitrum } from "viem/chains"
@@ -57,13 +65,20 @@ const EIP_7702_BYTECODE_PREFIX = "0xef0100"
 
 type ContractPreset = "metamask" | "uniswap" | "uniswapNew" | "undelegate" | "custom"
 
-const CHAIN_UI = [
-  { key: "mainnet" as ChainKey, name: "Ethereum", icon: "⟠", hover: "hover:border-teal-500", active: "border-teal-500 bg-teal-500/10 shadow-[0_0_15px_rgba(20,184,166,0.3)]", text: "text-teal-500" },
-  { key: "unichain" as ChainKey, name: "Unichain", icon: "🦄", hover: "hover:border-pink-500", active: "border-pink-500 bg-pink-500/10 shadow-[0_0_15px_rgba(236,72,153,0.3)]", text: "text-pink-500" },
-  { key: "optimism" as ChainKey, name: "Optimism", icon: "🔴", hover: "hover:border-red-500", active: "border-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.3)]", text: "text-red-500" },
-  { key: "base" as ChainKey, name: "Base", icon: "🔵", hover: "hover:border-blue-500", active: "border-blue-500 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]", text: "text-blue-500" },
-  { key: "bsc" as ChainKey, name: "BSC", icon: "🔗", hover: "hover:border-yellow-500", active: "border-yellow-500 bg-yellow-500/10 shadow-[0_0_15px_rgba(234,179,8,0.3)]", text: "text-yellow-500" },
-  { key: "arbitrum" as ChainKey, name: "Arbitrum", icon: "🔗", hover: "hover:border-sky-500", active: "border-sky-500 bg-sky-500/10 shadow-[0_0_15px_rgba(14,165,233,0.3)]", text: "text-sky-500" },
+const CHAIN_UI: {
+  key: ChainKey
+  name: string
+  icon: React.ReactNode
+  hover: string
+  active: string
+  text: string
+}[] = [
+  { key: "mainnet", name: "Ethereum", icon: <EthereumIcon className="w-7 h-7" />, hover: "hover:border-teal-500", active: "border-teal-500 bg-teal-500/10 shadow-[0_0_15px_rgba(20,184,166,0.3)]", text: "text-teal-500" },
+  { key: "unichain", name: "Unichain", icon: <UnichainIcon className="w-7 h-7 rounded-md" />, hover: "hover:border-pink-500", active: "border-pink-500 bg-pink-500/10 shadow-[0_0_15px_rgba(236,72,153,0.3)]", text: "text-pink-500" },
+  { key: "optimism", name: "Optimism", icon: <OptimismIcon className="w-7 h-7 rounded-full" />, hover: "hover:border-red-500", active: "border-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.3)]", text: "text-red-500" },
+  { key: "base", name: "Base", icon: <BaseIcon className="w-7 h-7 rounded-full" />, hover: "hover:border-blue-500", active: "border-blue-500 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]", text: "text-blue-500" },
+  { key: "bsc", name: "BSC", icon: <BscIcon className="w-7 h-7 rounded-full" />, hover: "hover:border-yellow-500", active: "border-yellow-500 bg-yellow-500/10 shadow-[0_0_15px_rgba(234,179,8,0.3)]", text: "text-yellow-500" },
+  { key: "arbitrum", name: "Arbitrum", icon: <ArbitrumIcon className="w-7 h-7 rounded-full" />, hover: "hover:border-sky-500", active: "border-sky-500 bg-sky-500/10 shadow-[0_0_15px_rgba(14,165,233,0.3)]", text: "text-sky-500" },
 ]
 
 const CONTRACT_UI: {
@@ -453,7 +468,7 @@ export default function DelegationForm() {
                           )}
                         />
                       )}
-                      <span className="text-xl">{chain.icon}</span>
+                      {chain.icon}
                       <span
                         className={cn(
                           "font-medium text-sm",
