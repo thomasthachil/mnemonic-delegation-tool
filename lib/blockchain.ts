@@ -1,11 +1,11 @@
 import { createWalletClient, http, type Chain } from "viem"
 import type { HDAccount } from "viem/accounts"
 
-export async function signDelegationAuthorization(account: HDAccount, contractAddress: `0x${string}`, chain: Chain) {
+export async function signDelegationAuthorization(account: HDAccount, contractAddress: `0x${string}`, chain: Chain, rpcUrl?: string) {
   const walletClient = createWalletClient({
     account,
     chain,
-    transport: http(),
+    transport: http(rpcUrl),
   })
 
   return walletClient.signAuthorization({
@@ -14,11 +14,11 @@ export async function signDelegationAuthorization(account: HDAccount, contractAd
   })
 }
 
-export async function sendDummyTransaction(account: HDAccount, authorization: any, chain: Chain) {
+export async function sendDummyTransaction(account: HDAccount, authorization: any, chain: Chain, rpcUrl?: string) {
   const walletClient = createWalletClient({
     account,
     chain,
-    transport: http(),
+    transport: http(rpcUrl),
   })
 
   return walletClient.sendTransaction({
