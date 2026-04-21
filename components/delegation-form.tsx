@@ -29,7 +29,7 @@ const formSchema = z.object({
 })
 
 const chains = {
-  mainnet: mainnet,
+  mainnet: { ...mainnet, rpcUrls: { default: { http: ["https://eth-mainnet.public.blastapi.io"] } } },
   unichain: unichain,
   optimism: optimism,
   base: base,
