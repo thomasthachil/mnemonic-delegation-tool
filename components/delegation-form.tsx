@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
 import { createWalletClient, http, publicActions } from "viem"
-import { mainnet, optimism, base, unichain, bsc, arbitrum } from "viem/chains"
+import { mainnet, optimism, base, unichain, bsc, arbitrum, celo } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -35,6 +35,7 @@ const chains = {
   base: base,
   bsc: bsc,
   arbitrum: arbitrum,
+  celo: celo,
 }
 
 // Chain styling
@@ -46,6 +47,7 @@ const chainStyles = {
   base: { color: "#0052FF", icon: "🔵", label: "Base" },
   // unichainSepolia: { color: "#FF007A", icon: "🦄", label: "Unichain Sepolia" },
   arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
+  celo: { color: "#FCFF52", icon: "🔗", label: "Celo" },
   // polygon: { color: "#FF007A", icon: "🔗", label: "Polygon" },
   bsc: { color: "#FF007A", icon: "🔗", label: "BSC" },
   // blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
