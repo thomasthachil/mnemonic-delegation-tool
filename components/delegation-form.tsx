@@ -63,6 +63,8 @@ const contractAddresses = {
     sepolia: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     base: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     arbitrum: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    celo: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    polygon: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
   },
   uniswap: {
     mainnet: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
