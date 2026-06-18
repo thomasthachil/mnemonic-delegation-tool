@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
 import { createWalletClient, fallback, http, publicActions, type Transport } from "viem"
-import { mainnet, optimism, base, unichain, bsc, arbitrum, monad, tempo } from "viem/chains"
+import { mainnet, optimism, base, unichain, bsc, arbitrum, celo, polygon, monad, tempo } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -35,6 +35,8 @@ const chains = {
   base: base,
   bsc: bsc,
   arbitrum: arbitrum,
+  celo: celo,
+  polygon: polygon,
   monad: monad,
   tempo: tempo,
 }
@@ -43,6 +45,7 @@ const chains = {
 // viem's chain defaults. Chains omitted here fall back to the viem default.
 const rpcUrls: Partial<Record<keyof typeof chains, string[]>> = {
   mainnet: [
+    "https://eth-mainnet.public.blastapi.io",
     "https://ethereum-rpc.publicnode.com",
     "https://eth.llamarpc.com",
     "https://rpc.ankr.com/eth",
@@ -66,7 +69,8 @@ const chainStyles = {
   base: { color: "#0052FF", icon: "🔵", label: "Base" },
   // unichainSepolia: { color: "#FF007A", icon: "🦄", label: "Unichain Sepolia" },
   arbitrum: { color: "#FF007A", icon: "🔗", label: "Arbitrum" },
-  // polygon: { color: "#FF007A", icon: "🔗", label: "Polygon" },
+  celo: { color: "#FCFF52", icon: "🔗", label: "Celo" },
+  polygon: { color: "#8247E5", icon: "🔗", label: "Polygon" },
   bsc: { color: "#FF007A", icon: "🔗", label: "BSC" },
   monad: { color: "#836EF9", icon: "🟣", label: "Monad" },
   tempo: { color: "#635BFF", icon: "🎵", label: "Tempo" },
@@ -82,6 +86,8 @@ const contractAddresses = {
     sepolia: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     base: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     arbitrum: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    celo: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    polygon: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
   },
   uniswap: {
     mainnet: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
@@ -134,7 +140,6 @@ export default function DelegationForm() {
     delegationVerified?: boolean
   }>({ type: null, message: "" })
   const [account, setAccount] = useState<HDAccount | null>(null)
-  const [mounted, setMounted] = useState(false)
   const [undelegatingAll, setUndelegatingAll] = useState(false)
   const [undelegateAll, setUndelegateAll] = useState<Record<string, {
     status: "pending" | "success" | "error"
@@ -147,11 +152,7 @@ export default function DelegationForm() {
     delegatedTo?: string | null
     message?: string
   }> | null>(null)
-
-  // After mounting, we can safely show the UI
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
