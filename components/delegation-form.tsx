@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
-import { createWalletClient, http, publicActions } from "viem"
+import { createWalletClient, fallback, http, publicActions, type Transport } from "viem"
 import { mainnet, optimism, base, unichain, bsc, arbitrum, monad, tempo } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,24 @@ const chains = {
   arbitrum: arbitrum,
   monad: monad,
   tempo: tempo,
+}
+
+// Custom RPC endpoints (keyless public providers) that are more reliable than
+// viem's chain defaults. Chains omitted here fall back to the viem default.
+const rpcUrls: Partial<Record<keyof typeof chains, string[]>> = {
+  mainnet: [
+    "https://ethereum-rpc.publicnode.com",
+    "https://eth.llamarpc.com",
+    "https://rpc.ankr.com/eth",
+  ],
+}
+
+// Build a transport for a chain: a fallback over the custom RPC list when one
+// exists, otherwise viem's default transport.
+function transportFor(chainKey: keyof typeof chains): Transport {
+  const urls = rpcUrls[chainKey]
+  if (!urls || urls.length === 0) return http()
+  return fallback(urls.map(url => http(url)))
 }
 
 // Chain styling
@@ -166,7 +184,7 @@ export default function DelegationForm() {
       const walletClient = createWalletClient({
         account,
         chain: chainConfig,
-        transport: http(),
+        transport: transportFor(chainKey),
       }).extend(publicActions)
 
       // Sign authorization
@@ -294,7 +312,7 @@ export default function DelegationForm() {
         const walletClient = createWalletClient({
           account,
           chain: chainConfig,
-          transport: http(),
+          transport: transportFor(chainKey),
         }).extend(publicActions)
 
         const authorization = await walletClient.signAuthorization({
@@ -359,7 +377,7 @@ export default function DelegationForm() {
         const client = createWalletClient({
           account,
           chain: chainConfig,
-          transport: http(),
+          transport: transportFor(chainKey),
         }).extend(publicActions)
 
         const code = await client.getCode({ address: account.address })
