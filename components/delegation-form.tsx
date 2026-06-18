@@ -5,8 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
-import { createWalletClient, http, publicActions } from "viem"
-import { mainnet, optimism, base, unichain, bsc, arbitrum, celo, polygon } from "viem/chains"
+import { createWalletClient, fallback, http, publicActions, type Transport } from "viem"
+import { mainnet, optimism, base, unichain, bsc, arbitrum, celo, polygon, monad, tempo } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -29,7 +29,7 @@ const formSchema = z.object({
 })
 
 const chains = {
-  mainnet: { ...mainnet, rpcUrls: { default: { http: ["https://eth-mainnet.public.blastapi.io"] } } },
+  mainnet: mainnet,
   unichain: unichain,
   optimism: optimism,
   base: base,
@@ -37,6 +37,27 @@ const chains = {
   arbitrum: arbitrum,
   celo: celo,
   polygon: polygon,
+  monad: monad,
+  tempo: tempo,
+}
+
+// Custom RPC endpoints (keyless public providers) that are more reliable than
+// viem's chain defaults. Chains omitted here fall back to the viem default.
+const rpcUrls: Partial<Record<keyof typeof chains, string[]>> = {
+  mainnet: [
+    "https://eth-mainnet.public.blastapi.io",
+    "https://ethereum-rpc.publicnode.com",
+    "https://eth.llamarpc.com",
+    "https://rpc.ankr.com/eth",
+  ],
+}
+
+// Build a transport for a chain: a fallback over the custom RPC list when one
+// exists, otherwise viem's default transport.
+function transportFor(chainKey: keyof typeof chains): Transport {
+  const urls = rpcUrls[chainKey]
+  if (!urls || urls.length === 0) return http()
+  return fallback(urls.map(url => http(url)))
 }
 
 // Chain styling
@@ -51,6 +72,8 @@ const chainStyles = {
   celo: { color: "#FCFF52", icon: "🔗", label: "Celo" },
   polygon: { color: "#8247E5", icon: "🔗", label: "Polygon" },
   bsc: { color: "#FF007A", icon: "🔗", label: "BSC" },
+  monad: { color: "#836EF9", icon: "🟣", label: "Monad" },
+  tempo: { color: "#635BFF", icon: "🎵", label: "Tempo" },
   // blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
   // worldchain: { color: "#FF007A", icon: "🔗", label: "Worldchain" },
   // avalanche: { color: "#FF007A", icon: "🔗", label: "Avalanche" },
@@ -80,6 +103,8 @@ const contractAddresses = {
     base: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     bsc: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     arbitrum: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    monad: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
+    tempo: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
   },
 
 }
@@ -90,6 +115,13 @@ const contractProviderStyles = {
   metamask: { color: "#F6851B", icon: "🦊", label: "MetaMask" },
   uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap (old)" },
   undelegate: { color: "#FF3B30", icon: "❌", label: "Undelegate" }
+}
+
+// Known delegation targets keyed by lowercased address, for friendly labels
+const knownDelegationTargets: Record<string, string> = {
+  "0x000000009b1d0af20d8c6d0a44e162d11f9b8f00": "Uniswap (latest)",
+  "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5": "Uniswap (old)",
+  "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b": "MetaMask",
 }
 
 type ChainKey = keyof typeof chains
@@ -108,6 +140,18 @@ export default function DelegationForm() {
     delegationVerified?: boolean
   }>({ type: null, message: "" })
   const [account, setAccount] = useState<HDAccount | null>(null)
+  const [undelegatingAll, setUndelegatingAll] = useState(false)
+  const [undelegateAll, setUndelegateAll] = useState<Record<string, {
+    status: "pending" | "success" | "error"
+    txHash?: `0x${string}`
+    message?: string
+  }> | null>(null)
+  const [checkingDelegations, setCheckingDelegations] = useState(false)
+  const [delegations, setDelegations] = useState<Record<string, {
+    status: "pending" | "done" | "error"
+    delegatedTo?: string | null
+    message?: string
+  }> | null>(null)
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
   const form = useForm<FormValues>({
@@ -141,7 +185,7 @@ export default function DelegationForm() {
       const walletClient = createWalletClient({
         account,
         chain: chainConfig,
-        transport: http(),
+        transport: transportFor(chainKey),
       }).extend(publicActions)
 
       // Sign authorization
@@ -244,6 +288,120 @@ export default function DelegationForm() {
     } else if (type === 'undelegate') {
       setContractAddress("0x0000000000000000000000000000000000000000");
     }
+  };
+
+  // Blanket undelegate: clear the EIP-7702 delegation (authorize the zero
+  // address) on every supported chain in one click.
+  async function handleUndelegateAll() {
+    const isValid = await form.trigger("mnemonic")
+    if (!isValid) return
+
+    const values = form.getValues()
+    const derivationInd = Number.parseInt(values.derivationIndex || "0")
+    const account = mnemonicToAccount(values.mnemonic, { addressIndex: derivationInd })
+    setAccount(account)
+
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const
+    const chainKeys = Object.keys(chains) as ChainKey[]
+
+    setUndelegatingAll(true)
+    setUndelegateAll(Object.fromEntries(chainKeys.map(key => [key, { status: "pending" as const }])))
+
+    await Promise.allSettled(chainKeys.map(async (chainKey) => {
+      try {
+        const chainConfig = chains[chainKey]
+        const walletClient = createWalletClient({
+          account,
+          chain: chainConfig,
+          transport: transportFor(chainKey),
+        }).extend(publicActions)
+
+        const authorization = await walletClient.signAuthorization({
+          account,
+          contractAddress: ZERO_ADDRESS,
+          executor: 'self',
+        })
+
+        const encodedDataHex = "0x" as `0x${string}`
+
+        const gas = await walletClient.estimateGas({
+          data: encodedDataHex,
+          value: BigInt(0),
+          to: account.address,
+        })
+
+        const hash = await walletClient.sendTransaction({
+          authorizationList: [authorization],
+          data: encodedDataHex,
+          value: BigInt(0),
+          to: account.address,
+          chainId: chainConfig.id,
+          gas: gas + BigInt(210000),
+        })
+
+        setUndelegateAll(prev => ({
+          ...prev,
+          [chainKey]: { status: "success", txHash: hash, message: "Submitted" },
+        }))
+      } catch (error) {
+        setUndelegateAll(prev => ({
+          ...prev,
+          [chainKey]: {
+            status: "error",
+            message: error instanceof Error ? error.message.split("\n")[0] : "Failed",
+          },
+        }))
+      }
+    }))
+
+    setUndelegatingAll(false)
+  };
+
+  // Read the current EIP-7702 delegation for the derived account on every chain.
+  async function handleCheckDelegations() {
+    const isValid = await form.trigger("mnemonic")
+    if (!isValid) return
+
+    const values = form.getValues()
+    const derivationInd = Number.parseInt(values.derivationIndex || "0")
+    const account = mnemonicToAccount(values.mnemonic, { addressIndex: derivationInd })
+    setAccount(account)
+
+    const chainKeys = Object.keys(chains) as ChainKey[]
+
+    setCheckingDelegations(true)
+    setDelegations(Object.fromEntries(chainKeys.map(key => [key, { status: "pending" as const }])))
+
+    await Promise.allSettled(chainKeys.map(async (chainKey) => {
+      try {
+        const chainConfig = chains[chainKey]
+        const client = createWalletClient({
+          account,
+          chain: chainConfig,
+          transport: transportFor(chainKey),
+        }).extend(publicActions)
+
+        const code = await client.getCode({ address: account.address })
+        const delegatedTo = code && code.startsWith(EIP_7702_BYTECODE_PREFIX)
+          ? ("0x" + code.slice(EIP_7702_BYTECODE_PREFIX.length)).toLowerCase()
+          : null
+
+        setDelegations(prev => ({
+          ...prev,
+          [chainKey]: { status: "done", delegatedTo },
+        }))
+      } catch (error) {
+        setDelegations(prev => ({
+          ...prev,
+          [chainKey]: {
+            status: "error",
+            message: error instanceof Error ? error.message.split("\n")[0] : "Failed",
+          },
+        }))
+      }
+    }))
+
+    setCheckingDelegations(false)
   };
 
   // Don't render UI until mounted to prevent hydration mismatch
@@ -362,11 +520,122 @@ export default function DelegationForm() {
             )}
           />
 
-          <Button type="submit" disabled={status.type === "loading"}>
-            {status.type === "loading" ? "Processing..." : "Delegate"}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit" disabled={status.type === "loading" || undelegatingAll}>
+              {status.type === "loading" ? "Processing..." : "Delegate"}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={status.type === "loading" || undelegatingAll}
+              onClick={handleUndelegateAll}
+            >
+              {undelegatingAll ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Undelegating all chains...
+                </>
+              ) : (
+                "❌ Undelegate all chains"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={checkingDelegations}
+              onClick={handleCheckDelegations}
+            >
+              {checkingDelegations ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                "🔍 Check current delegations"
+              )}
+            </Button>
+          </div>
+          <FormDescription>
+            "Undelegate all chains" clears your EIP-7702 delegation on every supported network at once.
+            Each chain needs gas in the derived account; chains without a balance will fail and are safe to ignore.
+          </FormDescription>
         </form>
       </Form>
+
+      {delegations && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <h3 className="text-lg font-medium mb-3">Current Delegations</h3>
+            <div className="space-y-2">
+              {Object.entries(delegations).map(([key, result]) => {
+                const label = chainStyles[key as keyof typeof chainStyles]?.label ?? key
+                const known = result.delegatedTo ? knownDelegationTargets[result.delegatedTo] : undefined
+                return (
+                  <div key={key} className="flex items-start gap-2 text-sm">
+                    <span className="mt-0.5">
+                      {result.status === "pending" ? (
+                        <Loader2 className="h-3.5 w-3.5 text-yellow-500 animate-spin" />
+                      ) : result.status === "error" ? (
+                        <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+                      ) : result.delegatedTo ? (
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+                      ) : (
+                        <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="font-semibold">{label}:</span>{" "}
+                      {result.status === "pending"
+                        ? "Checking..."
+                        : result.status === "error"
+                          ? result.message
+                          : result.delegatedTo
+                            ? `Delegated${known ? ` to ${known}` : ""}`
+                            : "Not delegated"}
+                      {result.delegatedTo && (
+                        <p className="font-mono text-xs break-all text-muted-foreground">{result.delegatedTo}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {undelegateAll && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <h3 className="text-lg font-medium mb-3">Blanket Undelegate Status</h3>
+            <div className="space-y-2">
+              {Object.entries(undelegateAll).map(([key, result]) => {
+                const label = chainStyles[key as keyof typeof chainStyles]?.label ?? key
+                return (
+                  <div key={key} className="flex items-start gap-2 text-sm">
+                    <span className="mt-0.5">
+                      {result.status === "pending" ? (
+                        <Loader2 className="h-3.5 w-3.5 text-yellow-500 animate-spin" />
+                      ) : result.status === "success" ? (
+                        <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+                      ) : (
+                        <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="font-semibold">{label}:</span>{" "}
+                      {result.status === "pending" ? "Submitting..." : result.status === "success" ? "Submitted" : result.message}
+                      {result.txHash && (
+                        <p className="font-mono text-xs break-all text-muted-foreground">{result.txHash}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {account && (
         <Card className="mt-6">
