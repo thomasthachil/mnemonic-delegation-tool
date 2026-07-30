@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { type HDAccount, mnemonicToAccount } from "viem/accounts"
 import { createWalletClient, fallback, http, publicActions, type Transport } from "viem"
-import { mainnet, optimism, base, unichain, bsc, arbitrum, celo, polygon, monad, tempo } from "viem/chains"
+import { mainnet, optimism, base, unichain, bsc, arbitrum, celo, polygon, monad, tempo, robinhood } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -14,14 +14,14 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2, Loader2, KeyRound, Crosshair, Search, Ban, ExternalLink } from "lucide-react"
+import { AlertCircle, CheckCircle2, Loader2, KeyRound, Crosshair, Search, Ban, ExternalLink, Eye, EyeOff } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 const formSchema = z.object({
   mnemonic: z.string().min(12, {
     message: "Mnemonic must be at least 12 words",
   }),
-  derivationIndex: z.string().default("0"),
+  derivationIndex: z.string(),
   contractAddress: z.string().min(42, {
     message: "Please enter a valid contract address",
   }),
@@ -39,6 +39,7 @@ const chains = {
   polygon: polygon,
   monad: monad,
   tempo: tempo,
+  robinhood: robinhood,
 }
 
 // Custom RPC endpoints (keyless public providers) that are more reliable than
@@ -88,6 +89,7 @@ const chainStyles = {
   bsc: { color: "#F0B90B", icon: "🔗", label: "BSC", logo: chainLogo("binance") },
   monad: { color: "#836EF9", icon: "🟣", label: "Monad", logo: chainLogo("monad") },
   tempo: { color: "#635BFF", icon: "🎵", label: "Tempo", logo: chainLogo("tempo") },
+  robinhood: { color: "#CCFF00", icon: "🪶", label: "Robinhood", logo: chainLogo("robinhood") },
   // blast: { color: "#FF007A", icon: "🔗", label: "Blast" },
   // worldchain: { color: "#FF007A", icon: "🔗", label: "Worldchain" },
   // avalanche: { color: "#FF007A", icon: "🔗", label: "Avalanche" },
@@ -103,14 +105,20 @@ const contractAddresses = {
     celo: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
     polygon: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
   },
-  uniswap: {
-    mainnet: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
-    unichain: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
-    optimism: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
-    base: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
-    bsc: "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5",
+  // Alchemy Modular Account v2, same address on all supported EVM chains
+  alchemy: {
+    mainnet: "0x69007702764179f14F51cdce752f4f775d74E139",
+    unichain: "0x69007702764179f14F51cdce752f4f775d74E139",
+    optimism: "0x69007702764179f14F51cdce752f4f775d74E139",
+    base: "0x69007702764179f14F51cdce752f4f775d74E139",
+    bsc: "0x69007702764179f14F51cdce752f4f775d74E139",
+    arbitrum: "0x69007702764179f14F51cdce752f4f775d74E139",
+    celo: "0x69007702764179f14F51cdce752f4f775d74E139",
+    polygon: "0x69007702764179f14F51cdce752f4f775d74E139",
+    monad: "0x69007702764179f14F51cdce752f4f775d74E139",
   },
-  uniswapNew: {
+  // Calibur v1.0
+  uniswap: {
     mainnet: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     unichain: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     optimism: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
@@ -120,22 +128,36 @@ const contractAddresses = {
     monad: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
     tempo: "0x000000009B1D0aF20D8C6d0A44e162d11F9b8f00",
   },
+  // Calibur v1.1
+  uniswapNew: {
+    mainnet: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+    unichain: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+    optimism: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+    base: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+    bsc: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+    arbitrum: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+    monad: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+    robinhood: "0x000000005c84F8Fd50b21CAC312528A64437030e",
+  },
 
 }
 
 // Contract provider styling
 const contractProviderStyles = {
-  uniswapNew: { color: "#FF007A", icon: "🦄", label: "Uniswap (latest)" },
+  uniswapNew: { color: "#FF007A", icon: "🦄", label: "Uniswap v1.1 (latest)" },
+  uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap v1.0 (old)" },
   metamask: { color: "#F6851B", icon: "🦊", label: "MetaMask" },
-  uniswap: { color: "#FF007A", icon: "🦄", label: "Uniswap (old)" },
+  alchemy: { color: "#363FF9", icon: "⚗️", label: "Alchemy" },
   undelegate: { color: "#FF3B30", icon: "❌", label: "Undelegate" }
 }
 
 // Known delegation targets keyed by lowercased address, for friendly labels
 const knownDelegationTargets: Record<string, string> = {
-  "0x000000009b1d0af20d8c6d0a44e162d11f9b8f00": "Uniswap (latest)",
-  "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5": "Uniswap (old)",
+  "0x000000005c84f8fd50b21cac312528a64437030e": "Uniswap v1.1 (latest)",
+  "0x000000009b1d0af20d8c6d0a44e162d11f9b8f00": "Uniswap v1.0 (old)",
+  "0x3cbad1e3b9049ecdb9588fb48dd61d80faf41bd5": "Uniswap (legacy)",
   "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b": "MetaMask",
+  "0x69007702764179f14f51cdce752f4f775d74e139": "Alchemy",
 }
 
 type ChainKey = keyof typeof chains
@@ -188,6 +210,7 @@ export default function DelegationForm() {
     message?: string
   }> | null>(null)
   const [checkingDelegations, setCheckingDelegations] = useState(false)
+  const [showMnemonic, setShowMnemonic] = useState(false)
   const [delegations, setDelegations] = useState<Record<string, {
     status: "pending" | "done" | "error"
     delegatedTo?: string | null
@@ -318,17 +341,16 @@ export default function DelegationForm() {
     }
   }
 
-  const handlePresetContract = (type: 'metamask' | 'uniswap' | 'undelegate' | 'uniswapNew') => {
-    const chainValue = form.getValues('chain');
-    
-    if (type === 'metamask' && chainValue in contractAddresses.metamask) {
-      setContractAddress(contractAddresses.metamask[chainValue as keyof typeof contractAddresses.metamask]);
-    } else if (type === 'uniswap' && chainValue in contractAddresses.uniswap) {
-      setContractAddress(contractAddresses.uniswap[chainValue as keyof typeof contractAddresses.uniswap]);
-    } else if (type === 'uniswapNew' && chainValue in contractAddresses.uniswapNew) {
-      setContractAddress(contractAddresses.uniswapNew[chainValue as keyof typeof contractAddresses.uniswapNew]);
-    } else if (type === 'undelegate') {
+  const handlePresetContract = (type: keyof typeof contractProviderStyles) => {
+    if (type === 'undelegate') {
       setContractAddress("0x0000000000000000000000000000000000000000");
+      return;
+    }
+
+    const chainValue = form.getValues('chain');
+    const addresses: Record<string, string> = contractAddresses[type];
+    if (chainValue in addresses) {
+      setContractAddress(addresses[chainValue]);
     }
   };
 
@@ -468,16 +490,27 @@ export default function DelegationForm() {
                     <FormItem>
                       <FormLabel>Recovery phrase</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="word one  word two  word three  …"
-                          className="min-h-[88px] resize-y font-mono text-sm leading-relaxed"
-                          autoComplete="off"
-                          spellCheck={false}
-                          {...field}
-                        />
+                        <div className="relative">
+                          <Textarea
+                            placeholder="word one  word two  word three  …"
+                            className="min-h-[88px] resize-y pr-10 font-mono text-sm leading-relaxed"
+                            autoComplete="off"
+                            spellCheck={false}
+                            style={showMnemonic ? undefined : ({ WebkitTextSecurity: "disc" } as React.CSSProperties)}
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowMnemonic(prev => !prev)}
+                            aria-label={showMnemonic ? "Hide recovery phrase" : "Show recovery phrase"}
+                            className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {showMnemonic ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormDescription>
-                        12–24 words. Processed in this browser only.
+                        12–24 words. Processed in this browser only. Hidden while typing — use the eye to reveal.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -567,7 +600,7 @@ export default function DelegationForm() {
                           <button
                             key={key}
                             type="button"
-                            onClick={() => handlePresetContract(key as 'metamask' | 'uniswap' | 'undelegate' | 'uniswapNew')}
+                            onClick={() => handlePresetContract(key as keyof typeof contractProviderStyles)}
                             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium text-foreground/90 transition-colors hover:border-primary/50 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                           >
                             <span className="text-sm leading-none" style={{ color }}>{icon}</span>
