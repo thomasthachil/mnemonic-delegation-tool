@@ -15,7 +15,7 @@ This is a **Mnemonic Delegation Tool** — a client-side Next.js 16 app for dele
 
 ### Non-obvious caveats
 
-- **Package manager**: Uses **bun**. The lockfile is `bun.lock`. Old `package-lock.json` and `pnpm-lock.yaml` have been removed.
+- **Package manager & runtime**: Uses **bun** end to end. The lockfile is `bun.lock`, `packageManager` is pinned in `package.json`, and all scripts run through `bun --bun` so Next.js executes on the bun runtime rather than Node. Old `package-lock.json` and `pnpm-lock.yaml` have been removed.
 - **ESLint**: Uses ESLint 9 flat config (`eslint.config.mjs`) with `eslint-config-next@16`. The lint script runs `eslint .` directly (not `next lint`, which was removed in Next.js 16).
 - **React 19.2 hooks rules**: The `react-hooks` ESLint plugin v7 (bundled with the Next.js 16 config) enforces stricter rules — `set-state-in-effect` and `purity`. The `setMounted` pattern uses `useSyncExternalStore` instead of `useState`+`useEffect` to satisfy these rules.
 - **Build flags**: `next.config.mjs` sets `ignoreBuildErrors: true` for TypeScript. The `eslint.ignoreDuringBuilds` option was removed in Next.js 16.
